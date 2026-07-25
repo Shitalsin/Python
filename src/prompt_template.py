@@ -11,7 +11,7 @@ def build_prompt(query, retrieved_items):
 
 Use ONLY the context below to answer the question. If the answer is not found in the context, say "I could not find enough information in the available commits, PRs, or issues to answer this confidently."
 
-Always cite your sources using [Source X] notation when you use information from them.
+Always cite your sources using the exact notation [Source X] (with square brackets) every single time you reference information, even if you mention the same source multiple times. Do not write "Source X" without the square brackets.
 
 Context:
 {context_text}

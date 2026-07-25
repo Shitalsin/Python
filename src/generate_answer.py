@@ -1,3 +1,4 @@
+import re       # Python built-in regex library
 import json
 import numpy as np
 import faiss
@@ -51,6 +52,23 @@ def retrieve_mmr(query, final_k=5, initial_k=20, lambda_param=0.7):
         remaining.remove(best_idx)
     return [dataset[idx] for idx in selected]
 
+def extract_cited_sources(answer_text, retrieved_items):
+    cited_numbers = re.findall(r"\[Source (\d+)\]", answer_text)
+    cited_numbers = set(int(n) for n in cited_numbers)
+
+    cited_sources = []
+    for i, item in enumerate(retrieved_items):
+        source_number = i + 1
+        if source_number in cited_numbers:
+            cited_sources.append({
+                "source_number": source_number,
+                "type": item["type"],
+                "url": item["url"],
+                "text_snippet": item["text"][:200]
+            })
+
+    return cited_sources
+
 def ask_patchcontext(query):
     retrieved_items = retrieve_mmr(query)
 
@@ -63,7 +81,8 @@ def ask_patchcontext(query):
 
     answer = response.choices[0].message.content
 
-    return answer, retrieved_items
+    cited_sources = extract_cited_sources(answer, retrieved_items)
+    return answer, cited_sources
 
 if __name__ == "__main__":
     query = "Why does FastAPI use dependency injection?"
@@ -74,6 +93,6 @@ if __name__ == "__main__":
     print("ANSWER:")
     print(answer)
     print()
-    print("SOURCES USED:")
-    for i, item in enumerate(sources):
-        print(f"[Source {i+1}] {item['url']}")
+    print("CITED SOURCES:")
+    for source in sources:
+        print(f"[Source {source['source_number']}] ({source['type']}) {source['url']}")

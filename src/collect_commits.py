@@ -35,7 +35,7 @@ print("Commits saved to data/commits.json")"""
 #(Pagination)
 
 all_commits = []    #Empty list 
-max_pages = 5   #5 pages fetch 5x100=500 commits 
+max_pages = 20   #5 pages fetch 5x100=500 commits 
 
 for page_number in range(1, max_pages + 1):
     params = {"per_page": 100, "page": page_number}

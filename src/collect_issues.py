@@ -17,7 +17,7 @@ headers = {
 url = "https://api.github.com/repos/fastapi/fastapi/issues"
 
 all_issues = []
-max_pages = 5
+max_pages = 20
 
 for page_number in range(1, max_pages + 1):
     params = {

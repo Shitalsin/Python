@@ -69,6 +69,35 @@ def extract_cited_sources(answer_text, retrieved_items):
 
     return cited_sources
 
+def check_hallucination(answer_text, retrieved_items, cited_sources):
+    warnings = []
+
+    all_source_numbers = re.findall(r"\[Source (\d+)\]", answer_text)
+    all_source_numbers = set(int(n) for n in all_source_numbers)
+
+    max_valid_number = len(retrieved_items)
+    invalid_citations = [n for n in all_source_numbers if n > max_valid_number or n < 1]
+
+    if invalid_citations:
+        warnings.append(f"Answer cites source numbers that don't exist: {invalid_citations}")
+
+    if not cited_sources:
+        warnings.append("Answer contains no valid citations - claims may be ungrounded.")
+    else:
+        cited_text = " ".join(item["text_snippet"] for item in cited_sources)
+
+        answer_embedding = embed_model.encode([answer_text])[0]
+        cited_embedding = embed_model.encode([cited_text])[0]
+
+        grounding_score = cosine_sim(answer_embedding, cited_embedding)
+
+        if grounding_score < 0.3:
+            warnings.append(f"Low semantic overlap between answer and cited sources (score: {grounding_score:.2f}). Answer may contain unsupported claims.")
+
+    is_safe = len(warnings) == 0
+
+    return is_safe, warnings
+
 def ask_patchcontext(query):
     retrieved_items = retrieve_mmr(query)
 
@@ -82,11 +111,12 @@ def ask_patchcontext(query):
     answer = response.choices[0].message.content
 
     cited_sources = extract_cited_sources(answer, retrieved_items)
-    return answer, cited_sources
+    is_safe, warnings = check_hallucination(answer, retrieved_items, cited_sources)
+    return answer, cited_sources, is_safe, warnings
 
 if __name__ == "__main__":
     query = "Why does FastAPI use dependency injection?"
-    answer, sources = ask_patchcontext(query)
+    answer, sources, is_safe, warnings = ask_patchcontext(query)
 
     print("QUESTION:", query)
     print()
@@ -96,3 +126,10 @@ if __name__ == "__main__":
     print("CITED SOURCES:")
     for source in sources:
         print(f"[Source {source['source_number']}] ({source['type']}) {source['url']}")
+
+    print()
+    print("HALLUCINATION CHECK:")
+    print("Is safe:", is_safe)
+    if warnings:
+        for w in warnings:
+            print("⚠️", w)
